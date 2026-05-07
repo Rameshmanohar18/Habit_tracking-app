@@ -845,25 +845,32 @@ export default function HabitTrackerApp() {
 
   /* ── List view ───────────────────────────────────────── */
 
-  // Build 50 days: today first (index 0 = today), then past 49 days going right
-  // No pagination — always fixed from today back 49 days
-  const DAYS_SHOWN = 50;
+  // 5 years = 1825 days, 50 per page = 37 pages
+  const DAYS_SHOWN   = 50;
+  const TOTAL_DAYS   = 365 * 5; // 5 years
+  const TOTAL_PAGES  = Math.ceil(TOTAL_DAYS / DAYS_SHOWN); // 37
+
+  // Page 0 = today..day49, page 1 = day50..day99, etc.
+  const pageStart    = gridOffset * DAYS_SHOWN; // daysAgo of first column
   const columns = Array.from({ length: DAYS_SHOWN }, (_, i) => {
-    const daysAgo = i; // 0 = today, 1 = yesterday, ..., 49 = 49 days ago
+    const daysAgo = pageStart + i;
     const ds = dateStr(daysAgo);
     const d  = new Date(); d.setDate(d.getDate() - daysAgo);
     return {
       dateStr: ds,
       dayName: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
       dayNum:  d.getDate(),
+      monthName: d.toLocaleDateString('en-US', { month: 'short' }),
       isToday: daysAgo === 0,
     };
   });
 
-  // Date range label
-  const rangeStart = new Date(); rangeStart.setDate(rangeStart.getDate() - (DAYS_SHOWN - 1));
-  const rangeEnd   = new Date();
-  const rangeLabel = `${rangeEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ← last 50 days → ${rangeStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  // Date range label for current page
+  const pageEndDate   = new Date(); pageEndDate.setDate(pageEndDate.getDate() - pageStart);
+  const pageStartDate = new Date(); pageStartDate.setDate(pageStartDate.getDate() - (pageStart + DAYS_SHOWN - 1));
+  const rangeLabel    = gridOffset === 0
+    ? `Today — ${pageStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+    : `${pageEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} — ${pageStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
   return (
     <div className="ht-app">
@@ -928,22 +935,48 @@ export default function HabitTrackerApp() {
           </div>
         ) : (
           <>
-            {/* ── Date range label ── */}
+            {/* ── Pagination nav ── */}
             <div className="ht-grid-nav">
-              <span className="ht-grid-range" style={{ textAlign: 'left' }}>📅 Today → Last 50 days</span>
-              <span className="ht-grid-range" style={{ fontSize: '0.75rem', opacity: 0.6 }}>{rangeLabel}</span>
+              <button
+                className="ht-nav-btn"
+                onClick={() => setGridOffset(Math.min(TOTAL_PAGES - 1, gridOffset + 1))}
+                disabled={gridOffset >= TOTAL_PAGES - 1}
+                title="Older data"
+              >
+                <ChevronLeft size={16} /> Older
+              </button>
+
+              <div className="ht-page-info">
+                <span className="ht-grid-range">{rangeLabel}</span>
+                <span className="ht-page-num">Page {gridOffset + 1} / {TOTAL_PAGES}</span>
+              </div>
+
+              <button
+                className="ht-nav-btn"
+                onClick={() => setGridOffset(Math.max(0, gridOffset - 1))}
+                disabled={gridOffset === 0}
+                title="Newer data"
+              >
+                Newer <ChevronRight size={16} />
+              </button>
             </div>
 
             <div className="ht-grid-wrap">
               {/* ── Column headers (day names + dates) ── */}
               <div className="ht-grid-header">
                 <div className="ht-grid-name-col" />
-                {columns.map(col => (
-                  <div key={col.dateStr} className={`ht-col-header ${col.isToday ? 'is-today-col' : ''}`}>
-                    <span className="ht-col-day">{col.dayName}</span>
-                    <span className="ht-col-num">{col.dayNum}</span>
-                  </div>
-                ))}
+                {columns.map((col, ci) => {
+                  // Show month label when month changes
+                  const prevCol = columns[ci - 1];
+                  const showMonth = ci === 0 || col.monthName !== prevCol?.monthName;
+                  return (
+                    <div key={col.dateStr} className={`ht-col-header ${col.isToday ? 'is-today-col' : ''}`}>
+                      <span className="ht-col-month">{showMonth ? col.monthName : ''}</span>
+                      <span className="ht-col-day">{col.dayName}</span>
+                      <span className="ht-col-num">{col.dayNum}</span>
+                    </div>
+                  );
+                })}
                 <div className="ht-grid-del-col" />
               </div>
 

@@ -1889,3 +1889,40 @@
 .ht-cell-btn.cell-done {
   animation: tickPop 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
+
+/* ── Pagination nav updates ── */
+.ht-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.ht-page-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.ht-page-num {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Month label in column header */
+.ht-col-month {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--cyan);
+  text-transform: uppercase;
+  min-height: 10px;
+  display: block;
+}
