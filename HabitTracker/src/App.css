@@ -1616,3 +1616,83 @@
 .done-dot   { background: linear-gradient(135deg, #34d399, #059669); }
 .missed-dot { background: rgba(255,255,255,0.08); }
 .today-dot  { background: rgba(255,255,255,0.08); outline: 2px solid var(--yellow); outline-offset: 1px; }
+
+/* ═══════════════════════════════════════════════════════════
+   DATE / TIME / QUOTE BANNER
+═══════════════════════════════════════════════════════════ */
+
+.ht-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 0.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(12px);
+  animation: fadeUp 0.5s ease both;
+  flex-wrap: wrap;
+}
+
+.ht-banner-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.ht-banner-time {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.ht-banner-date {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.ht-banner-quote {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border-left: 2px solid var(--border);
+  padding-left: 1.25rem;
+  min-width: 0;
+}
+
+.ht-quote-mark {
+  font-size: 1.8rem;
+  line-height: 0.5;
+  color: var(--purple);
+  font-family: Georgia, serif;
+  opacity: 0.6;
+}
+
+.ht-quote-text {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.ht-quote-author {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+
+@media (max-width: 600px) {
+  .ht-banner { flex-direction: column; gap: 1rem; }
+  .ht-banner-quote { border-left: none; border-top: 1px solid var(--border); padding-left: 0; padding-top: 0.75rem; }
+  .ht-banner-time { font-size: 1.6rem; }
+}
