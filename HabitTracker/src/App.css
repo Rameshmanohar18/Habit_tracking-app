@@ -1877,3 +1877,15 @@
   color: var(--purple-light);
   background: rgba(168, 85, 247, 0.15);
 }
+
+/* ── Tick pop animation ── */
+@keyframes tickPop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.45); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+.ht-cell-btn.cell-done {
+  animation: tickPop 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}

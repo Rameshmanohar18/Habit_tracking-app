@@ -1,10 +1,78 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts';
 import '../App.css';
+
+/* ── Confetti burst component ── */
+function ConfettiBurst({ x, y, color }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width = window.innerWidth;
+    const H = canvas.height = window.innerHeight;
+
+    const COLORS = [color, '#ffffff', '#fbbf24', '#f0eeff', '#a855f7', '#34d399'];
+    const particles = Array.from({ length: 60 }, () => ({
+      x, y,
+      vx: (Math.random() - 0.5) * 12,
+      vy: (Math.random() - 1.5) * 10,
+      size: Math.random() * 7 + 3,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      rotation: Math.random() * 360,
+      rotSpeed: (Math.random() - 0.5) * 10,
+      shape: Math.random() > 0.5 ? 'rect' : 'circle',
+      alpha: 1,
+    }));
+
+    let frame;
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      let alive = false;
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.35; // gravity
+        p.vx *= 0.98;
+        p.rotation += p.rotSpeed;
+        p.alpha -= 0.018;
+        if (p.alpha <= 0) return;
+        alive = true;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillStyle = p.color;
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rotation * Math.PI) / 180);
+        if (p.shape === 'rect') {
+          ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+        } else {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+      if (alive) frame = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => cancelAnimationFrame(frame);
+  }, [x, y, color]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none',
+        zIndex: 9999, width: '100vw', height: '100vh',
+      }}
+    />
+  );
+}
 
 export default function HabitTrackerApp() {
   const [habits, setHabits]               = useState([]);
@@ -114,7 +182,15 @@ export default function HabitTrackerApp() {
     setEditColorIdx(habit.colorIdx ?? idx);
   };
 
-  const toggleHabit = (habitId, date) => {
+  const [confetti, setConfetti] = useState(null); // { x, y, color }
+
+  const launchConfetti = (x, y, color) => {
+    setConfetti({ x, y, color, id: Date.now() });
+    setTimeout(() => setConfetti(null), 1200);
+  };
+
+  const toggleHabit = (habitId, date, event) => {
+    const wasCompleted = !!habits.find(h => h.id === habitId)?.completions[date];
     const updated = habits.map(h => {
       if (h.id !== habitId) return h;
       const completions = { ...h.completions };
@@ -124,6 +200,12 @@ export default function HabitTrackerApp() {
     saveHabits(updated);
     if (selectedHabit?.id === habitId)
       setSelectedHabit(updated.find(h => h.id === habitId));
+    // Fire confetti only when marking as DONE (not undoing)
+    if (!wasCompleted && event) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const [c1] = habitColor(habitId);
+      launchConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2, c1);
+    }
   };
 
   /* ── Date helpers ────────────────────────────────────── */
@@ -599,7 +681,7 @@ export default function HabitTrackerApp() {
                       <button
                         className={`ht-cal-week-cell ${day.completed ? 'done' : 'missed'} ${day.isToday ? 'today' : ''} ${day.isFuture ? 'future' : ''}`}
                         disabled={day.isFuture}
-                        onClick={() => !day.isFuture && toggleHabit(selectedHabit.id, day.date)}
+                        onClick={e => !day.isFuture && toggleHabit(selectedHabit.id, day.date, e)}
                         title={`${day.date} — ${day.completed ? 'Done ✓' : 'Missed ✗'}`}
                       >
                         <span className="ht-cal-week-num">{day.day}</span>
@@ -785,6 +867,7 @@ export default function HabitTrackerApp() {
 
   return (
     <div className="ht-app">
+      {confetti && <ConfettiBurst key={confetti.id} x={confetti.x} y={confetti.y} color={confetti.color} />}
       <div className="ht-grid-container">
 
         {/* ── Date / Time / Quote banner ── */}
@@ -913,7 +996,7 @@ export default function HabitTrackerApp() {
                           <button
                             className={`ht-cell-btn ${done ? 'cell-done' : 'cell-miss'} ${col.isToday ? 'cell-today' : ''}`}
                             style={done ? { color: c1 } : {}}
-                            onClick={() => isPast && toggleHabit(habit.id, col.dateStr)}
+                            onClick={e => isPast && toggleHabit(habit.id, col.dateStr, e)}
                             disabled={!isPast}
                             title={!isPast ? 'Future date' : done ? 'Mark incomplete' : 'Mark complete'}
                           >
