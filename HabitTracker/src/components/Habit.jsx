@@ -763,11 +763,11 @@ export default function HabitTrackerApp() {
 
   /* ── List view ───────────────────────────────────────── */
 
-  // Build 50 days with offset (0 = most recent 50, 1 = prev 50, etc.)
+  // Build 50 days: today first (index 0 = today), then past 49 days going right
+  // No pagination — always fixed from today back 49 days
   const DAYS_SHOWN = 50;
-  const startDaysAgo = gridOffset * DAYS_SHOWN;
   const columns = Array.from({ length: DAYS_SHOWN }, (_, i) => {
-    const daysAgo = startDaysAgo + (DAYS_SHOWN - 1 - i);
+    const daysAgo = i; // 0 = today, 1 = yesterday, ..., 49 = 49 days ago
     const ds = dateStr(daysAgo);
     const d  = new Date(); d.setDate(d.getDate() - daysAgo);
     return {
@@ -779,9 +779,9 @@ export default function HabitTrackerApp() {
   });
 
   // Date range label
-  const rangeStart = new Date(); rangeStart.setDate(rangeStart.getDate() - (startDaysAgo + DAYS_SHOWN - 1));
-  const rangeEnd   = new Date(); rangeEnd.setDate(rangeEnd.getDate() - startDaysAgo);
-  const rangeLabel = `${rangeStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${rangeEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  const rangeStart = new Date(); rangeStart.setDate(rangeStart.getDate() - (DAYS_SHOWN - 1));
+  const rangeEnd   = new Date();
+  const rangeLabel = `${rangeEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ← last 50 days → ${rangeStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
   return (
     <div className="ht-app">
@@ -845,24 +845,10 @@ export default function HabitTrackerApp() {
           </div>
         ) : (
           <>
-            {/* ── Date range navigation ── */}
+            {/* ── Date range label ── */}
             <div className="ht-grid-nav">
-              <button
-                className="ht-nav-btn"
-                onClick={() => setGridOffset(gridOffset + 1)}
-                title="Previous 20 days"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <span className="ht-grid-range">{rangeLabel}</span>
-              <button
-                className="ht-nav-btn"
-                onClick={() => setGridOffset(Math.max(0, gridOffset - 1))}
-                disabled={gridOffset === 0}
-                title="Next 20 days"
-              >
-                <ChevronRight size={18} />
-              </button>
+              <span className="ht-grid-range" style={{ textAlign: 'left' }}>📅 Today → Last 50 days</span>
+              <span className="ht-grid-range" style={{ fontSize: '0.75rem', opacity: 0.6 }}>{rangeLabel}</span>
             </div>
 
             <div className="ht-grid-wrap">
