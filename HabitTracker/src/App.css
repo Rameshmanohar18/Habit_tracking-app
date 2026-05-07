@@ -1849,3 +1849,31 @@
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(0,0,0,0.3);
 }
+
+/* ── Edit icon button (shows on row hover) ── */
+.ht-edit-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 3px 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition), color var(--transition), background var(--transition);
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.ht-grid-row:hover .ht-edit-icon-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ht-edit-icon-btn:hover {
+  color: var(--purple-light);
+  background: rgba(168, 85, 247, 0.15);
+}

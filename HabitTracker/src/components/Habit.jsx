@@ -887,8 +887,7 @@ export default function HabitTrackerApp() {
                     <div
                       className="ht-grid-name"
                       onClick={() => setSelectedHabit(habit)}
-                      onDoubleClick={e => { e.stopPropagation(); openEdit(habit, hi); }}
-                      title="Click to view analytics · Double-click to edit"
+                      title="Click to view analytics"
                     >
                       <svg className="ht-ring-icon" viewBox="0 0 36 36" width="28" height="28">
                         <defs>
@@ -907,6 +906,16 @@ export default function HabitTrackerApp() {
                         />
                       </svg>
                       <span className="ht-grid-habit-name" style={{ color: c1 }}>{habit.name}</span>
+                      <button
+                        className="ht-edit-icon-btn"
+                        onClick={e => { e.stopPropagation(); openEdit(habit, hi); }}
+                        title="Edit name or color"
+                      >
+                        <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                      </button>
                     </div>
 
                     {/* Day cells */}
@@ -943,7 +952,7 @@ export default function HabitTrackerApp() {
               })}
             </div>
 
-            <p className="ht-hint">Tap to view analytics · Double-click to rename or change color · Use ← → to browse past data</p>
+            <p className="ht-hint">Tap to view analytics · Hover + click ✏️ to rename or change color · Use ← → to browse past data</p>
           </>
         )}
 
