@@ -11,10 +11,10 @@ export default function HabitTrackerApp() {
   const [selectedHabit, setSelectedHabit] = useState(null);
   const [newHabitName, setNewHabitName]   = useState('');
   const [loading, setLoading]             = useState(true);
-  const [chartTimeframe, setChartTimeframe] = useState('week');
+  const [chartTimeframe, setChartTimeframe] = useState('month');
   const [chartOffset, setChartOffset]     = useState(0);
   const [calendarOffset, setCalendarOffset] = useState(0);
-  const [calendarMode, setCalendarMode]   = useState('month'); // week | month | quarter | year
+  const [calendarMode, setCalendarMode]   = useState('quarter'); // week | month | quarter | year
   const [gridOffset, setGridOffset]       = useState(0);
 
   /* ── Storage ─────────────────────────────────────────── */
@@ -278,6 +278,21 @@ export default function HabitTrackerApp() {
   const monthCalendar = (h) => calendarDays(h);
   const calendarMonthLabel = () => calendarPeriodLabel();
 
+  /* ── Gradient colors per habit (shared between list + detail) ── */
+  const RING_COLORS = [
+    ['#22d3ee','#3b82f6'],
+    ['#34d399','#10b981'],
+    ['#a855f7','#ec4899'],
+    ['#fbbf24','#f97316'],
+    ['#f87171','#ef4444'],
+    ['#818cf8','#6366f1'],
+  ];
+
+  const habitColor = (habitId) => {
+    const idx = habits.findIndex(h => h.id === habitId);
+    return RING_COLORS[(idx < 0 ? 0 : idx) % RING_COLORS.length];
+  };
+
   /* ── Loading ─────────────────────────────────────────── */
   if (loading) return (
     <div className="ht-loading">
@@ -289,8 +304,8 @@ export default function HabitTrackerApp() {
   /* ── Detail view ─────────────────────────────────────── */
   if (selectedHabit) {
     const data     = chartData(selectedHabit);
-    const calendar = monthCalendar(selectedHabit);
-    
+    const [hc1, hc2] = habitColor(selectedHabit.id); // habit's own color
+
     const todayScore    = todayDone(selectedHabit) ? 100 : 0;
     const weekScore     = weeklyScore(selectedHabit);
     const monthScore    = monthlyScore(selectedHabit);
@@ -348,7 +363,7 @@ export default function HabitTrackerApp() {
             <button className="ht-back-icon-btn" onClick={() => setSelectedHabit(null)}>
               <ArrowLeft size={20} />
             </button>
-            <h1 className="ht-detail-v2-title">{selectedHabit.name}</h1>
+            <h1 className="ht-detail-v2-title" style={{ color: hc1 }}>{selectedHabit.name}</h1>
             <div className="ht-detail-topbar-actions">
               <button className="ht-icon-btn" title="Edit"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4l5 5-9 9H2v-5l9-9z"/></svg></button>
               <button className="ht-icon-btn" title="More"><svg width="18" height="18" fill="currentColor"><circle cx="9" cy="3" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="9" cy="15" r="1.5"/></svg></button>
@@ -362,7 +377,7 @@ export default function HabitTrackerApp() {
 
           {/* ── Overview section ── */}
           <section className="ht-section">
-            <h2 className="ht-section-title">Overview</h2>
+            <h2 className="ht-section-title" style={{ color: hc1 }}>Overview</h2>
 
             <div className="ht-overview-grid">
               {/* Big ring */}
@@ -370,8 +385,8 @@ export default function HabitTrackerApp() {
                 <svg viewBox="0 0 120 120" width="120" height="120">
                   <defs>
                     <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#22d3ee" />
-                      <stop offset="100%" stopColor="#3b82f6" />
+                      <stop offset="0%" stopColor={hc1} />
+                      <stop offset="100%" stopColor={hc2} />
                     </linearGradient>
                   </defs>
                   <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" />
@@ -726,16 +741,6 @@ export default function HabitTrackerApp() {
   const rangeStart = new Date(); rangeStart.setDate(rangeStart.getDate() - (startDaysAgo + DAYS_SHOWN - 1));
   const rangeEnd   = new Date(); rangeEnd.setDate(rangeEnd.getDate() - startDaysAgo);
   const rangeLabel = `${rangeStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${rangeEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-
-  // Gradient colors per habit (cycles through a palette)
-  const RING_COLORS = [
-    ['#22d3ee','#3b82f6'],
-    ['#34d399','#10b981'],
-    ['#a855f7','#ec4899'],
-    ['#fbbf24','#f97316'],
-    ['#f87171','#ef4444'],
-    ['#818cf8','#6366f1'],
-  ];
 
   return (
     <div className="ht-app">
