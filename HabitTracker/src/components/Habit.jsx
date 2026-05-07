@@ -11,12 +11,15 @@ export default function HabitTrackerApp() {
   const [selectedHabit, setSelectedHabit] = useState(null);
   const [newHabitName, setNewHabitName]   = useState('');
   const [loading, setLoading]             = useState(true);
-  const [chartTimeframe, setChartTimeframe] = useState('month');
+  const [chartTimeframe, setChartTimeframe] = useState('week');
   const [chartOffset, setChartOffset]     = useState(0);
   const [calendarOffset, setCalendarOffset] = useState(0);
-  const [calendarMode, setCalendarMode]   = useState('month');
+  const [calendarMode, setCalendarMode]   = useState('quarter');
   const [gridOffset, setGridOffset]       = useState(0);
   const [now, setNow]                     = useState(new Date());
+  const [editingHabit, setEditingHabit]   = useState(null); // { id, name, colorIdx }
+  const [editName, setEditName]           = useState('');
+  const [editColorIdx, setEditColorIdx]   = useState(0);
 
   // Tick clock every second
   useEffect(() => {
@@ -96,6 +99,19 @@ export default function HabitTrackerApp() {
   const removeHabit = (id) => {
     saveHabits(habits.filter(h => h.id !== id));
     if (selectedHabit?.id === id) setSelectedHabit(null);
+  };
+
+  const updateHabit = (id, name, colorIdx) => {
+    const updated = habits.map(h => h.id === id ? { ...h, name, colorIdx } : h);
+    saveHabits(updated);
+    if (selectedHabit?.id === id) setSelectedHabit(updated.find(h => h.id === id));
+    setEditingHabit(null);
+  };
+
+  const openEdit = (habit, idx) => {
+    setEditingHabit(habit);
+    setEditName(habit.name);
+    setEditColorIdx(habit.colorIdx ?? idx);
   };
 
   const toggleHabit = (habitId, date) => {
@@ -335,7 +351,9 @@ export default function HabitTrackerApp() {
 
   const habitColor = (habitId) => {
     const idx = habits.findIndex(h => h.id === habitId);
-    return RING_COLORS[(idx < 0 ? 0 : idx) % RING_COLORS.length];
+    const habit = habits[idx];
+    const colorIdx = habit?.colorIdx ?? (idx < 0 ? 0 : idx);
+    return RING_COLORS[colorIdx % RING_COLORS.length];
   };
 
   /* ── Loading ─────────────────────────────────────────── */
@@ -866,7 +884,12 @@ export default function HabitTrackerApp() {
                 return (
                   <div key={habit.id} className="ht-grid-row" style={{ animationDelay: `${hi * 40}ms` }}>
                     {/* Habit name with ring icon */}
-                    <div className="ht-grid-name" onClick={() => setSelectedHabit(habit)}>
+                    <div
+                      className="ht-grid-name"
+                      onClick={() => setSelectedHabit(habit)}
+                      onDoubleClick={e => { e.stopPropagation(); openEdit(habit, hi); }}
+                      title="Click to view analytics · Double-click to edit"
+                    >
                       <svg className="ht-ring-icon" viewBox="0 0 36 36" width="28" height="28">
                         <defs>
                           <linearGradient id={`ring-${habit.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -920,11 +943,75 @@ export default function HabitTrackerApp() {
               })}
             </div>
 
-            <p className="ht-hint">Tap a habit name to view detailed analytics · Use ← → to browse past data</p>
+            <p className="ht-hint">Tap to view analytics · Double-click to rename or change color · Use ← → to browse past data</p>
           </>
         )}
 
       </div>
+
+      {/* ── Edit habit modal ── */}
+      {editingHabit && (
+        <div className="ht-modal-overlay" onClick={() => setEditingHabit(null)}>
+          <div className="ht-modal" onClick={e => e.stopPropagation()}>
+            <h2 className="ht-modal-title">Edit Habit</h2>
+
+            <label className="ht-modal-label">Name</label>
+            <input
+              className="ht-input ht-modal-input"
+              type="text"
+              value={editName}
+              autoFocus
+              onChange={e => setEditName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') updateHabit(editingHabit.id, editName.trim() || editingHabit.name, editColorIdx);
+                if (e.key === 'Escape') setEditingHabit(null);
+              }}
+            />
+
+            <label className="ht-modal-label">Color</label>
+            <div className="ht-color-grid">
+              {RING_COLORS.map(([c1, c2], idx) => (
+                <button
+                  key={idx}
+                  className={`ht-color-swatch ${editColorIdx === idx ? 'selected' : ''}`}
+                  style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}
+                  onClick={() => setEditColorIdx(idx)}
+                >
+                  {editColorIdx === idx && <span className="ht-color-check">✓</span>}
+                </button>
+              ))}
+            </div>
+
+            <div className="ht-modal-preview">
+              <svg viewBox="0 0 36 36" width="32" height="32">
+                <defs>
+                  <linearGradient id="previewGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={RING_COLORS[editColorIdx][0]} />
+                    <stop offset="100%" stopColor={RING_COLORS[editColorIdx][1]} />
+                  </linearGradient>
+                </defs>
+                <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
+                <circle cx="18" cy="18" r="15" fill="none" stroke="url(#previewGrad)" strokeWidth="3"
+                  strokeDasharray="60 94.2" strokeLinecap="round" transform="rotate(-90 18 18)" />
+              </svg>
+              <span className="ht-modal-preview-name" style={{ color: RING_COLORS[editColorIdx][0] }}>
+                {editName || editingHabit.name}
+              </span>
+            </div>
+
+            <div className="ht-modal-actions">
+              <button className="ht-modal-cancel" onClick={() => setEditingHabit(null)}>Cancel</button>
+              <button
+                className="ht-modal-save"
+                style={{ background: `linear-gradient(135deg, ${RING_COLORS[editColorIdx][0]}, ${RING_COLORS[editColorIdx][1]})` }}
+                onClick={() => updateHabit(editingHabit.id, editName.trim() || editingHabit.name, editColorIdx)}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
