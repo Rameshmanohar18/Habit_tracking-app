@@ -14,7 +14,8 @@ export default function HabitTrackerApp() {
   const [chartTimeframe, setChartTimeframe] = useState('week');
   const [chartOffset, setChartOffset]     = useState(0);
   const [calendarOffset, setCalendarOffset] = useState(0);
-  const [gridOffset, setGridOffset]       = useState(0); // 0 = most recent 20 days, 1 = prev 20, etc.
+  const [calendarMode, setCalendarMode]   = useState('month'); // week | month | quarter | year
+  const [gridOffset, setGridOffset]       = useState(0);
 
   /* ── Storage ─────────────────────────────────────────── */
   useEffect(() => {
@@ -112,43 +113,59 @@ export default function HabitTrackerApp() {
   const chartData = (h) => {
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     if (chartTimeframe === 'week') {
-      // offset 0 = this week, 1 = last week, etc.
+      // Show each day of the selected week — 7 points on the line
       const baseOffset = chartOffset * 7;
       return Array.from({length:7},(_,i)=>{
         const daysAgo = baseOffset + (6 - i);
         const d = new Date(); d.setDate(d.getDate() - daysAgo);
         const ds = d.toISOString().split('T')[0];
-        return { name: d.toLocaleDateString('en-US',{weekday:'short'}), value: h.completions[ds]?100:0 };
+        return {
+          name: `${d.toLocaleDateString('en-US',{month:'short'})} ${d.getDate()}`,
+          value: h.completions[ds] ? 100 : 0,
+        };
       });
     }
     if (chartTimeframe === 'month') {
-      // offset 0 = this month's 4 weeks, 1 = prev month, etc.
-      const baseOffset = chartOffset * 4;
-      return Array.from({length:4},(_,w)=>{
-        let c=0;
-        const weekStart = (baseOffset + (3 - w)) * 7;
-        for(let d=0;d<7;d++) if(h.completions[dateStr(weekStart+d)]) c++;
-        return { name:`W${w+1}`, value:Math.round(c/7*100) };
+      // Show each day of the selected month — daily points
+      const baseOffset = chartOffset;
+      const refDate = new Date();
+      refDate.setMonth(refDate.getMonth() - baseOffset);
+      const y = refDate.getFullYear(), m = refDate.getMonth();
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      return Array.from({length: daysInMonth}, (_, i) => {
+        const d = new Date(y, m, i + 1);
+        const ds = d.toISOString().split('T')[0];
+        return {
+          name: i % 5 === 0 ? `${MONTHS[m]} ${i+1}` : '',
+          value: h.completions[ds] ? 100 : 0,
+        };
       });
     }
     if (chartTimeframe === 'quarter') {
-      const baseOffset = chartOffset * 3;
-      return Array.from({length:3},(_,i)=>{
-        let c=0,t=0;
-        const monthsAgo = baseOffset + (2 - i);
-        for(let d=0;d<30;d++) { t++; if(h.completions[dateStr(monthsAgo*30+d)]) c++; }
-        const dt=new Date(); dt.setMonth(dt.getMonth()-monthsAgo);
-        return { name:MONTHS[dt.getMonth()], value:Math.round(c/t*100) };
+      // Show each week of the selected quarter — ~13 points
+      const baseOffset = chartOffset * 13;
+      return Array.from({length:13},(_,i)=>{
+        let c=0;
+        const weekStart = (baseOffset + (12 - i)) * 7;
+        for(let d=0;d<7;d++) if(h.completions[dateStr(weekStart+d)]) c++;
+        const dt = new Date(); dt.setDate(dt.getDate() - (baseOffset + (12-i))*7);
+        return {
+          name: `${MONTHS[dt.getMonth()]} ${dt.getDate()}`,
+          value: Math.round(c/7*100),
+        };
       });
     }
-    // year
-    const baseOffset = chartOffset * 12;
-    return Array.from({length:12},(_,i)=>{
-      let c=0,t=0;
-      const monthsAgo = baseOffset + (11 - i);
-      for(let d=0;d<30;d++) { t++; if(h.completions[dateStr(monthsAgo*30+d)]) c++; }
-      const dt=new Date(); dt.setMonth(dt.getMonth()-monthsAgo);
-      return { name:MONTHS[dt.getMonth()], value:Math.round(c/t*100) };
+    // year — show each week of the year (~52 points)
+    const baseOffset = chartOffset * 52;
+    return Array.from({length:52},(_,i)=>{
+      let c=0;
+      const weekStart = (baseOffset + (51 - i)) * 7;
+      for(let d=0;d<7;d++) if(h.completions[dateStr(weekStart+d)]) c++;
+      const dt = new Date(); dt.setDate(dt.getDate() - (baseOffset + (51-i))*7);
+      return {
+        name: i % 4 === 0 ? `${MONTHS[dt.getMonth()]} ${dt.getFullYear().toString().slice(2)}` : '',
+        value: Math.round(c/7*100),
+      };
     });
   };
 
@@ -173,35 +190,93 @@ export default function HabitTrackerApp() {
     return `${d.getFullYear()}`;
   };
 
-  /* ── Calendar with offset ────────────────────────────── */
-  const monthCalendar = (h) => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth() - calendarOffset;
-    const refDate = new Date(y, m, 1);
-    const calYear = refDate.getFullYear();
-    const calMonth = refDate.getMonth();
-    const first = new Date(calYear, calMonth, 1);
-    const last  = new Date(calYear, calMonth + 1, 0);
+  /* ── Calendar with offset + mode ────────────────────── */
+  // Returns a flat list of day objects for the current view
+  const calendarDays = (h) => {
     const today = dateStr(0);
-    const weeks = [];
-    let week = Array(first.getDay()).fill(null);
-    for (let day = 1; day <= last.getDate(); day++) {
-      const d  = new Date(calYear, calMonth, day);
-      const ds = d.toISOString().split('T')[0];
-      const isFuture = ds > today;
-      week.push({ day, date: ds, completed: !!h.completions[ds], isToday: ds === today, isFuture });
-      if (week.length === 7) { weeks.push(week); week = []; }
+
+    if (calendarMode === 'week') {
+      // 7 days: offset 0 = this week (Mon–Sun), 1 = last week, etc.
+      return Array.from({ length: 7 }, (_, i) => {
+        const daysAgo = calendarOffset * 7 + (6 - i);
+        const d = new Date(); d.setDate(d.getDate() - daysAgo);
+        const ds = d.toISOString().split('T')[0];
+        return { day: d.getDate(), date: ds, completed: !!h.completions[ds], isToday: ds === today, isFuture: ds > today, dayName: d.toLocaleDateString('en-US', { weekday: 'short' }) };
+      });
     }
-    if (week.length) { while (week.length < 7) week.push(null); weeks.push(week); }
-    return weeks;
+
+    if (calendarMode === 'month') {
+      const ref = new Date(); ref.setMonth(ref.getMonth() - calendarOffset);
+      const y = ref.getFullYear(), m = ref.getMonth();
+      const first = new Date(y, m, 1), last = new Date(y, m + 1, 0);
+      const weeks = [];
+      let week = Array(first.getDay()).fill(null);
+      for (let day = 1; day <= last.getDate(); day++) {
+        const d = new Date(y, m, day), ds = d.toISOString().split('T')[0];
+        week.push({ day, date: ds, completed: !!h.completions[ds], isToday: ds === today, isFuture: ds > today });
+        if (week.length === 7) { weeks.push(week); week = []; }
+      }
+      if (week.length) { while (week.length < 7) week.push(null); weeks.push(week); }
+      return weeks; // array of weeks
+    }
+
+    if (calendarMode === 'quarter') {
+      // 3 months side by side
+      return Array.from({ length: 3 }, (_, mi) => {
+        const ref = new Date(); ref.setMonth(ref.getMonth() - calendarOffset * 3 - (2 - mi));
+        const y = ref.getFullYear(), m = ref.getMonth();
+        const first = new Date(y, m, 1), last = new Date(y, m + 1, 0);
+        const weeks = [];
+        let week = Array(first.getDay()).fill(null);
+        for (let day = 1; day <= last.getDate(); day++) {
+          const d = new Date(y, m, day), ds = d.toISOString().split('T')[0];
+          week.push({ day, date: ds, completed: !!h.completions[ds], isToday: ds === today, isFuture: ds > today });
+          if (week.length === 7) { weeks.push(week); week = []; }
+        }
+        if (week.length) { while (week.length < 7) week.push(null); weeks.push(week); }
+        return { label: ref.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), weeks };
+      });
+    }
+
+    // year — 12 months
+    return Array.from({ length: 12 }, (_, mi) => {
+      const ref = new Date(); ref.setMonth(ref.getMonth() - calendarOffset * 12 - (11 - mi));
+      const y = ref.getFullYear(), m = ref.getMonth();
+      const first = new Date(y, m, 1), last = new Date(y, m + 1, 0);
+      const weeks = [];
+      let week = Array(first.getDay()).fill(null);
+      for (let day = 1; day <= last.getDate(); day++) {
+        const d = new Date(y, m, day), ds = d.toISOString().split('T')[0];
+        week.push({ day, date: ds, completed: !!h.completions[ds], isToday: ds === today, isFuture: ds > today });
+        if (week.length === 7) { weeks.push(week); week = []; }
+      }
+      if (week.length) { while (week.length < 7) week.push(null); weeks.push(week); }
+      return { label: ref.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }), weeks };
+    });
   };
 
-  const calendarMonthLabel = () => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - calendarOffset);
-    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const calendarPeriodLabel = () => {
+    if (calendarMode === 'week') {
+      const end = new Date(); end.setDate(end.getDate() - calendarOffset * 7);
+      const start = new Date(end); start.setDate(start.getDate() - 6);
+      return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+    if (calendarMode === 'month') {
+      const d = new Date(); d.setMonth(d.getMonth() - calendarOffset);
+      return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+    if (calendarMode === 'quarter') {
+      const end = new Date(); end.setMonth(end.getMonth() - calendarOffset * 3);
+      const start = new Date(end); start.setMonth(start.getMonth() - 2);
+      return `${start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+    }
+    const d = new Date(); d.setFullYear(d.getFullYear() - calendarOffset);
+    return `${d.getFullYear()}`;
   };
+
+  // Keep old monthCalendar for backward compat (used nowhere else now)
+  const monthCalendar = (h) => calendarDays(h);
+  const calendarMonthLabel = () => calendarPeriodLabel();
 
   /* ── Loading ─────────────────────────────────────────── */
   if (loading) return (
@@ -353,23 +428,45 @@ export default function HabitTrackerApp() {
 
             <div className="ht-chart-v2">
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={data}>
+                <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.8" />
-                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.3" />
+                    <linearGradient id="scoreAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis dataKey="name" stroke="rgba(255,255,255,0.2)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis stroke="rgba(255,255,255,0.2)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 100]} ticks={[0, 20, 40, 60, 80, 100]} tickFormatter={v => `${v}%`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    stroke="rgba(255,255,255,0.15)"
+                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 9 }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={chartTimeframe === 'year' ? 1 : 0}
+                  />
+                  <YAxis
+                    stroke="rgba(255,255,255,0.15)"
+                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 9 }}
+                    axisLine={false}
+                    tickLine={false}
+                    domain={[0, 100]}
+                    ticks={[20, 40, 60, 80, 100]}
+                    tickFormatter={v => `${v}%`}
+                  />
                   <Tooltip
-                    cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                    cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
                     contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
                     formatter={v => [`${v}%`, 'Score']}
                   />
-                  <Bar dataKey="value" fill="url(#lineGrad)" radius={[4, 4, 0, 0]} />
-                </BarChart>
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: '#3b82f6', stroke: '#1e3a5f', strokeWidth: 1.5 }}
+                    activeDot={{ r: 5, fill: '#60a5fa', stroke: '#fff', strokeWidth: 1.5 }}
+                  />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </section>
@@ -418,51 +515,145 @@ export default function HabitTrackerApp() {
           <section className="ht-section">
             <div className="ht-section-header">
               <h2 className="ht-section-title">Calendar</h2>
+              <select className="ht-select-v2" value={calendarMode} onChange={e => { setCalendarMode(e.target.value); setCalendarOffset(0); }}>
+                <option value="week">Week</option>
+                <option value="month">Month</option>
+                <option value="quarter">Quarter</option>
+                <option value="year">Year</option>
+              </select>
             </div>
 
-            {/* Month navigation */}
+            {/* Period navigation */}
             <div className="ht-period-nav">
-              <button className="ht-nav-btn" onClick={() => setCalendarOffset(calendarOffset + 1)} title="Previous month">
+              <button className="ht-nav-btn" onClick={() => setCalendarOffset(calendarOffset + 1)} title="Previous period">
                 <ChevronLeft size={16} />
               </button>
-              <span className="ht-period-label">{calendarMonthLabel()}</span>
-              <button className="ht-nav-btn" onClick={() => setCalendarOffset(Math.max(0, calendarOffset - 1))} disabled={calendarOffset === 0} title="Next month">
+              <span className="ht-period-label">{calendarPeriodLabel()}</span>
+              <button className="ht-nav-btn" onClick={() => setCalendarOffset(Math.max(0, calendarOffset - 1))} disabled={calendarOffset === 0} title="Next period">
                 <ChevronRight size={16} />
               </button>
             </div>
 
-            <div className="ht-heatmap">
-              {/* Month labels */}
-              <div className="ht-heatmap-months">
-                {['Jan','Feb','Mar','Apr','May','Jun'].map(m => <span key={m}>{m}</span>)}
-              </div>
-
-              {/* Day labels */}
-              <div className="ht-heatmap-days">
-                {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <span key={d}>{d}</span>)}
-              </div>
-
-              {/* Grid */}
-              <div className="ht-heatmap-grid">
-                {calendar.map((week, wi) => (
-                  <div key={wi} className="ht-heatmap-week">
-                    {week.map((day, di) => (
+            {/* ── Week view: single row of 7 days ── */}
+            {calendarMode === 'week' && (() => {
+              const days = calendarDays(selectedHabit);
+              return (
+                <div className="ht-cal-week-view">
+                  {days.map((day, i) => (
+                    <div key={i} className="ht-cal-week-col">
+                      <span className="ht-cal-week-dayname">{day.dayName}</span>
                       <button
-                        key={di}
-                        disabled={!day || day.isFuture}
-                        onClick={() => day && !day.isFuture && toggleHabit(selectedHabit.id, day.date)}
-                        className={`ht-heatmap-cell ${!day ? 'empty' : ''} ${day?.completed ? 'filled' : ''} ${day?.isFuture ? 'future' : ''}`}
-                        title={day ? `${day.date} - ${day.completed ? 'Done' : 'Missed'}` : ''}
+                        className={`ht-cal-week-cell ${day.completed ? 'done' : 'missed'} ${day.isToday ? 'today' : ''} ${day.isFuture ? 'future' : ''}`}
+                        disabled={day.isFuture}
+                        onClick={() => !day.isFuture && toggleHabit(selectedHabit.id, day.date)}
+                        title={`${day.date} — ${day.completed ? 'Done ✓' : 'Missed ✗'}`}
                       >
-                        {day?.completed ? day.day : ''}
+                        <span className="ht-cal-week-num">{day.day}</span>
+                        <span className="ht-cal-week-tick">{day.completed ? '✓' : '✗'}</span>
                       </button>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
-            <button className="ht-edit-btn">EDIT</button>
+            {/* ── Month view: standard calendar grid ── */}
+            {calendarMode === 'month' && (() => {
+              const weeks = calendarDays(selectedHabit);
+              return (
+                <div className="ht-cal-month-view">
+                  <div className="ht-cal-dow-row">
+                    {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <span key={d} className="ht-cal-dow">{d}</span>)}
+                  </div>
+                  {weeks.map((week, wi) => (
+                    <div key={wi} className="ht-cal-month-week">
+                      {week.map((day, di) => (
+                        <button
+                          key={di}
+                          disabled={!day || day.isFuture}
+                          onClick={() => day && !day.isFuture && toggleHabit(selectedHabit.id, day.date)}
+                          className={`ht-cal-month-cell ${!day ? 'empty' : ''} ${day?.completed ? 'done' : ''} ${day?.isFuture ? 'future' : ''} ${day?.isToday ? 'today' : ''}`}
+                          title={day ? `${day.date} — ${day.completed ? 'Done ✓' : 'Missed ✗'}` : ''}
+                        >
+                          {day?.day ?? ''}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ── Quarter view: 3 mini month grids ── */}
+            {calendarMode === 'quarter' && (() => {
+              const months = calendarDays(selectedHabit);
+              return (
+                <div className="ht-cal-quarter-view">
+                  {months.map((mon, mi) => (
+                    <div key={mi} className="ht-cal-mini-month">
+                      <div className="ht-cal-mini-label">{mon.label}</div>
+                      <div className="ht-cal-dow-row mini">
+                        {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <span key={d} className="ht-cal-dow">{d}</span>)}
+                      </div>
+                      {mon.weeks.map((week, wi) => (
+                        <div key={wi} className="ht-cal-month-week">
+                          {week.map((day, di) => (
+                            <button
+                              key={di}
+                              disabled={!day || day.isFuture}
+                              onClick={() => day && !day.isFuture && toggleHabit(selectedHabit.id, day.date)}
+                              className={`ht-cal-month-cell mini ${!day ? 'empty' : ''} ${day?.completed ? 'done' : ''} ${day?.isFuture ? 'future' : ''} ${day?.isToday ? 'today' : ''}`}
+                              title={day ? `${day.date}` : ''}
+                            >
+                              {day?.day ?? ''}
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ── Year view: 12 mini month grids ── */}
+            {calendarMode === 'year' && (() => {
+              const months = calendarDays(selectedHabit);
+              return (
+                <div className="ht-cal-year-view">
+                  {months.map((mon, mi) => (
+                    <div key={mi} className="ht-cal-mini-month">
+                      <div className="ht-cal-mini-label">{mon.label}</div>
+                      <div className="ht-cal-dow-row mini">
+                        {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <span key={d} className="ht-cal-dow">{d}</span>)}
+                      </div>
+                      {mon.weeks.map((week, wi) => (
+                        <div key={wi} className="ht-cal-month-week">
+                          {week.map((day, di) => (
+                            <button
+                              key={di}
+                              disabled={!day || day.isFuture}
+                              onClick={() => day && !day.isFuture && toggleHabit(selectedHabit.id, day.date)}
+                              className={`ht-cal-month-cell mini ${!day ? 'empty' : ''} ${day?.completed ? 'done' : ''} ${day?.isFuture ? 'future' : ''} ${day?.isToday ? 'today' : ''}`}
+                              title={day ? `${day.date}` : ''}
+                            >
+                              {day?.day ?? ''}
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* Legend */}
+            <div className="ht-cal-legend-row">
+              <span className="ht-cal-legend-item"><span className="ht-cal-legend-dot done-dot" /> Done</span>
+              <span className="ht-cal-legend-item"><span className="ht-cal-legend-dot missed-dot" /> Missed</span>
+              <span className="ht-cal-legend-item"><span className="ht-cal-legend-dot today-dot" /> Today</span>
+            </div>
           </section>
 
           {/* ── Best streaks ── */}

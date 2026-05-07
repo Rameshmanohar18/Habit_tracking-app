@@ -1409,3 +1409,210 @@
   font-weight: 500;
   color: var(--text-secondary);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   CALENDAR VIEWS
+═══════════════════════════════════════════════════════════ */
+
+/* ── Shared day-of-week row ── */
+.ht-cal-dow-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.ht-cal-dow-row.mini { margin-bottom: 2px; }
+.ht-cal-dow {
+  text-align: center;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* ── Month view ── */
+.ht-cal-month-view { width: 100%; }
+
+.ht-cal-month-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 3px;
+}
+
+.ht-cal-month-cell {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--transition), background var(--transition);
+  font-family: inherit;
+}
+
+.ht-cal-month-cell.mini {
+  font-size: 0.6rem;
+  border-radius: 3px;
+}
+
+.ht-cal-month-cell.empty { visibility: hidden; pointer-events: none; }
+
+.ht-cal-month-cell.done {
+  background: linear-gradient(135deg, #34d399, #059669);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(52,211,153,0.25);
+}
+
+.ht-cal-month-cell:not(.empty):not(.future):not(.done) {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary);
+}
+
+.ht-cal-month-cell:not(.empty):not(.future):hover {
+  transform: scale(1.1);
+  background: rgba(255,255,255,0.1);
+}
+
+.ht-cal-month-cell.future {
+  background: rgba(255,255,255,0.02);
+  color: rgba(255,255,255,0.12);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.ht-cal-month-cell.today {
+  outline: 2px solid var(--yellow);
+  outline-offset: 1px;
+}
+
+/* ── Week view ── */
+.ht-cal-week-view {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 0.75rem;
+}
+
+.ht-cal-week-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ht-cal-week-dayname {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.ht-cal-week-cell {
+  width: 100%;
+  aspect-ratio: 0.75;
+  border-radius: 10px;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: transform var(--transition), background var(--transition);
+  font-family: inherit;
+}
+
+.ht-cal-week-cell.done {
+  background: linear-gradient(135deg, #34d399, #059669);
+  box-shadow: 0 4px 12px rgba(52,211,153,0.3);
+}
+
+.ht-cal-week-cell.missed {
+  background: rgba(255,255,255,0.05);
+}
+
+.ht-cal-week-cell.future {
+  background: rgba(255,255,255,0.02);
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+.ht-cal-week-cell.today { outline: 2px solid var(--yellow); outline-offset: 1px; }
+
+.ht-cal-week-cell:not(.future):hover { transform: scale(1.05); }
+
+.ht-cal-week-num {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ht-cal-week-tick {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.ht-cal-week-cell.done .ht-cal-week-tick { color: #fff; }
+.ht-cal-week-cell.missed .ht-cal-week-tick { color: rgba(255,255,255,0.25); }
+
+/* ── Quarter view ── */
+.ht-cal-quarter-view {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+/* ── Year view ── */
+.ht-cal-year-view {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 480px) {
+  .ht-cal-quarter-view,
+  .ht-cal-year-view { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Mini month (used in quarter + year) ── */
+.ht-cal-mini-month { }
+
+.ht-cal-mini-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--cyan);
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+/* ── Legend ── */
+.ht-cal-legend-row {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.ht-cal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.ht-cal-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.done-dot   { background: linear-gradient(135deg, #34d399, #059669); }
+.missed-dot { background: rgba(255,255,255,0.08); }
+.today-dot  { background: rgba(255,255,255,0.08); outline: 2px solid var(--yellow); outline-offset: 1px; }
