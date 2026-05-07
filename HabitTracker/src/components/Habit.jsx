@@ -404,15 +404,15 @@ export default function HabitTrackerApp() {
 
               {/* Stats */}
               <div className="ht-overview-stat">
-                <div className="ht-stat-value grad-green">+{monthScore}%</div>
+                <div className="ht-stat-value" style={{ color: hc1 }}>+{monthScore}%</div>
                 <div className="ht-stat-label">Month</div>
               </div>
               <div className="ht-overview-stat">
-                <div className="ht-stat-value grad-orange">+{yearScore}%</div>
+                <div className="ht-stat-value" style={{ color: hc2 }}>+{yearScore}%</div>
                 <div className="ht-stat-label">Year</div>
               </div>
               <div className="ht-overview-stat">
-                <div className="ht-stat-value grad-cyan">{totalDays}</div>
+                <div className="ht-stat-value" style={{ color: hc1 }}>{totalDays}</div>
                 <div className="ht-stat-label">Total</div>
               </div>
             </div>
@@ -421,7 +421,7 @@ export default function HabitTrackerApp() {
           {/* ── Score chart (line) ── */}
           <section className="ht-section">
             <div className="ht-section-header">
-              <h2 className="ht-section-title">Score</h2>
+              <h2 className="ht-section-title" style={{ color: hc1 }}>Score</h2>
               <select className="ht-select-v2" value={chartTimeframe} onChange={e => { setChartTimeframe(e.target.value); setChartOffset(0); }}>
                 <option value="week">Week</option>
                 <option value="month">Month</option>
@@ -446,41 +446,15 @@ export default function HabitTrackerApp() {
                 <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="scoreAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
-                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                      <stop offset="0%" stopColor={hc1} stopOpacity="0.25" />
+                      <stop offset="100%" stopColor={hc1} stopOpacity="0" />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                  <XAxis
-                    dataKey="name"
-                    stroke="rgba(255,255,255,0.15)"
-                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 9 }}
-                    axisLine={false}
-                    tickLine={false}
-                    interval={chartTimeframe === 'year' ? 1 : 0}
-                  />
-                  <YAxis
-                    stroke="rgba(255,255,255,0.15)"
-                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 9 }}
-                    axisLine={false}
-                    tickLine={false}
-                    domain={[0, 100]}
-                    ticks={[20, 40, 60, 80, 100]}
-                    tickFormatter={v => `${v}%`}
-                  />
-                  <Tooltip
-                    cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
-                    contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
-                    formatter={v => [`${v}%`, 'Score']}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: '#3b82f6', stroke: '#1e3a5f', strokeWidth: 1.5 }}
-                    activeDot={{ r: 5, fill: '#60a5fa', stroke: '#fff', strokeWidth: 1.5 }}
-                  />
+                  <XAxis dataKey="name" stroke="rgba(255,255,255,0.15)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 9 }} axisLine={false} tickLine={false} interval={chartTimeframe === 'year' ? 1 : 0} />
+                  <YAxis stroke="rgba(255,255,255,0.15)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 9 }} axisLine={false} tickLine={false} domain={[0, 100]} ticks={[20, 40, 60, 80, 100]} tickFormatter={v => `${v}%`} />
+                  <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} contentStyle={{ background: 'rgba(10,10,15,0.95)', border: `1px solid ${hc1}55`, borderRadius: 8, fontSize: 11 }} formatter={v => [`${v}%`, 'Score']} />
+                  <Line type="monotone" dataKey="value" stroke={hc1} strokeWidth={2} dot={{ r: 3, fill: hc1, stroke: hc2, strokeWidth: 1.5 }} activeDot={{ r: 5, fill: hc1, stroke: '#fff', strokeWidth: 1.5 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -489,7 +463,7 @@ export default function HabitTrackerApp() {
           {/* ── History (bar chart) ── */}
           <section className="ht-section">
             <div className="ht-section-header">
-              <h2 className="ht-section-title">History</h2>
+              <h2 className="ht-section-title" style={{ color: hc1 }}>History</h2>
               <select className="ht-select-v2" value={chartTimeframe} onChange={e => { setChartTimeframe(e.target.value); setChartOffset(0); }}>
                 <option value="week">Week</option>
                 <option value="month">Month</option>
@@ -515,12 +489,14 @@ export default function HabitTrackerApp() {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="name" stroke="rgba(255,255,255,0.2)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} />
                   <YAxis stroke="rgba(255,255,255,0.2)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 100]} ticks={[0, 50, 100]} tickFormatter={v => `${v}%`} />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                    contentStyle={{ background: 'rgba(10,10,15,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
-                    formatter={v => [`${v}%`, 'Completion']}
-                  />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }} contentStyle={{ background: 'rgba(10,10,15,0.95)', border: `1px solid ${hc1}55`, borderRadius: 8, fontSize: 11 }} formatter={v => [`${v}%`, 'Completion']} />
+                  <defs>
+                    <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={hc1} stopOpacity="1" />
+                      <stop offset="100%" stopColor={hc2} stopOpacity="0.7" />
+                    </linearGradient>
+                  </defs>
+                  <Bar dataKey="value" fill="url(#barGrad)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -529,7 +505,7 @@ export default function HabitTrackerApp() {
           {/* ── Calendar heatmap ── */}
           <section className="ht-section">
             <div className="ht-section-header">
-              <h2 className="ht-section-title">Calendar</h2>
+              <h2 className="ht-section-title" style={{ color: hc1 }}>Calendar</h2>
               <select className="ht-select-v2" value={calendarMode} onChange={e => { setCalendarMode(e.target.value); setCalendarOffset(0); }}>
                 <option value="week">Week</option>
                 <option value="month">Month</option>
@@ -553,7 +529,7 @@ export default function HabitTrackerApp() {
             {calendarMode === 'week' && (() => {
               const days = calendarDays(selectedHabit);
               return (
-                <div className="ht-cal-week-view">
+                <div className="ht-cal-week-view" style={{ '--habit-c1': hc1, '--habit-c2': hc2 }}>
                   {days.map((day, i) => (
                     <div key={i} className="ht-cal-week-col">
                       <span className="ht-cal-week-dayname">{day.dayName}</span>
@@ -576,7 +552,7 @@ export default function HabitTrackerApp() {
             {calendarMode === 'month' && (() => {
               const weeks = calendarDays(selectedHabit);
               return (
-                <div className="ht-cal-month-view">
+                <div className="ht-cal-month-view" style={{ '--habit-c1': hc1, '--habit-c2': hc2 }}>
                   <div className="ht-cal-dow-row">
                     {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <span key={d} className="ht-cal-dow">{d}</span>)}
                   </div>
@@ -603,7 +579,7 @@ export default function HabitTrackerApp() {
             {calendarMode === 'quarter' && (() => {
               const months = calendarDays(selectedHabit);
               return (
-                <div className="ht-cal-quarter-view">
+                <div className="ht-cal-quarter-view" style={{ '--habit-c1': hc1, '--habit-c2': hc2 }}>
                   {months.map((mon, mi) => (
                     <div key={mi} className="ht-cal-mini-month">
                       <div className="ht-cal-mini-label">{mon.label}</div>
@@ -635,7 +611,7 @@ export default function HabitTrackerApp() {
             {calendarMode === 'year' && (() => {
               const months = calendarDays(selectedHabit);
               return (
-                <div className="ht-cal-year-view">
+                <div className="ht-cal-year-view" style={{ '--habit-c1': hc1, '--habit-c2': hc2 }}>
                   {months.map((mon, mi) => (
                     <div key={mi} className="ht-cal-mini-month">
                       <div className="ht-cal-mini-label">{mon.label}</div>
@@ -673,7 +649,7 @@ export default function HabitTrackerApp() {
 
           {/* ── Best streaks ── */}
           <section className="ht-section">
-            <h2 className="ht-section-title">Best streaks</h2>
+            <h2 className="ht-section-title" style={{ color: hc1 }}>Best streaks</h2>
 
             <div className="ht-streaks-list">
               {allStreaks.length === 0 ? (
@@ -683,7 +659,7 @@ export default function HabitTrackerApp() {
                   <div key={i} className="ht-streak-row">
                     <span className="ht-streak-date">{new Date(s.start).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                     <div className="ht-streak-bar">
-                      <div className="ht-streak-fill" style={{ width: `${(s.len / best) * 100}%` }} />
+                      <div className="ht-streak-fill" style={{ width: `${(s.len / best) * 100}%`, background: `linear-gradient(90deg, ${hc2}, ${hc1})` }} />
                       <span className="ht-streak-len">{s.len}</span>
                     </div>
                     <span className="ht-streak-date">{new Date(s.end).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
@@ -695,7 +671,7 @@ export default function HabitTrackerApp() {
 
           {/* ── Frequency dots ── */}
           <section className="ht-section">
-            <h2 className="ht-section-title">Frequency</h2>
+            <h2 className="ht-section-title" style={{ color: hc1 }}>Frequency</h2>
 
             <div className="ht-freq-grid">
               {frequencyData.map((m, i) => (
@@ -704,8 +680,10 @@ export default function HabitTrackerApp() {
                     {[0, 1, 2, 3].map(row => (
                       <div
                         key={row}
-                        className={`ht-freq-dot ${m.percent > row * 25 ? 'active' : ''}`}
-                        style={m.percent > row * 25 ? { opacity: 0.3 + (m.percent / 100) * 0.7 } : {}}
+                        className="ht-freq-dot"
+                        style={m.percent > row * 25
+                          ? { background: hc1, opacity: 0.3 + (m.percent / 100) * 0.7 }
+                          : {}}
                       />
                     ))}
                   </div>
