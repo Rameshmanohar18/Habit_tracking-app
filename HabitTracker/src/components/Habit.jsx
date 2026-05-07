@@ -700,8 +700,8 @@ export default function HabitTrackerApp() {
 
   /* ── List view ───────────────────────────────────────── */
 
-  // Build 20 days with offset (0 = most recent 20, 1 = prev 20, etc.)
-  const DAYS_SHOWN = 20;
+  // Build 50 days with offset (0 = most recent 50, 1 = prev 50, etc.)
+  const DAYS_SHOWN = 50;
   const startDaysAgo = gridOffset * DAYS_SHOWN;
   const columns = Array.from({ length: DAYS_SHOWN }, (_, i) => {
     const daysAgo = startDaysAgo + (DAYS_SHOWN - 1 - i);
