@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts';
 import '../App.css';
@@ -108,46 +108,99 @@ export default function HabitTrackerApp() {
     return Math.round(total/days*100);
   };
 
-  /* ── Chart data ──────────────────────────────────────── */
+  /* ── Chart data with offset ─────────────────────────── */
   const chartData = (h) => {
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     if (chartTimeframe === 'week') {
+      // offset 0 = this week, 1 = last week, etc.
+      const baseOffset = chartOffset * 7;
       return Array.from({length:7},(_,i)=>{
-        const d=new Date(); d.setDate(d.getDate()-(6-i));
-        const ds=d.toISOString().split('T')[0];
+        const daysAgo = baseOffset + (6 - i);
+        const d = new Date(); d.setDate(d.getDate() - daysAgo);
+        const ds = d.toISOString().split('T')[0];
         return { name: d.toLocaleDateString('en-US',{weekday:'short'}), value: h.completions[ds]?100:0 };
       });
     }
     if (chartTimeframe === 'month') {
+      // offset 0 = this month's 4 weeks, 1 = prev month, etc.
+      const baseOffset = chartOffset * 4;
       return Array.from({length:4},(_,w)=>{
         let c=0;
-        for(let d=0;d<7;d++) if(h.completions[dateStr((3-w)*7+d)]) c++;
-        return { name:`Week ${w+1}`, value:Math.round(c/7*100) };
+        const weekStart = (baseOffset + (3 - w)) * 7;
+        for(let d=0;d<7;d++) if(h.completions[dateStr(weekStart+d)]) c++;
+        return { name:`W${w+1}`, value:Math.round(c/7*100) };
       });
     }
-    const months = chartTimeframe==='quarter' ? 3 : 12;
-    return Array.from({length:months},(_,i)=>{
+    if (chartTimeframe === 'quarter') {
+      const baseOffset = chartOffset * 3;
+      return Array.from({length:3},(_,i)=>{
+        let c=0,t=0;
+        const monthsAgo = baseOffset + (2 - i);
+        for(let d=0;d<30;d++) { t++; if(h.completions[dateStr(monthsAgo*30+d)]) c++; }
+        const dt=new Date(); dt.setMonth(dt.getMonth()-monthsAgo);
+        return { name:MONTHS[dt.getMonth()], value:Math.round(c/t*100) };
+      });
+    }
+    // year
+    const baseOffset = chartOffset * 12;
+    return Array.from({length:12},(_,i)=>{
       let c=0,t=0;
-      for(let d=0;d<30;d++) { t++; if(h.completions[dateStr((months-1-i)*30+d)]) c++; }
-      const dt=new Date(); dt.setMonth(dt.getMonth()-(months-1-i));
+      const monthsAgo = baseOffset + (11 - i);
+      for(let d=0;d<30;d++) { t++; if(h.completions[dateStr(monthsAgo*30+d)]) c++; }
+      const dt=new Date(); dt.setMonth(dt.getMonth()-monthsAgo);
       return { name:MONTHS[dt.getMonth()], value:Math.round(c/t*100) };
     });
   };
 
-  /* ── Calendar ────────────────────────────────────────── */
-  const monthCalendar = (h) => {
-    const now=new Date(), y=now.getFullYear(), m=now.getMonth();
-    const first=new Date(y,m,1), last=new Date(y,m+1,0);
-    const weeks=[], today=dateStr(0);
-    let week=Array(first.getDay()).fill(null);
-    for(let day=1;day<=last.getDate();day++){
-      const d=new Date(y,m,day), ds=d.toISOString().split('T')[0];
-      const isFuture = ds > today;
-      week.push({ day, date:ds, completed:!!h.completions[ds], isToday:ds===today, isFuture });
-      if(week.length===7){ weeks.push(week); week=[]; }
+  /* ── Chart period label ──────────────────────────────── */
+  const chartPeriodLabel = () => {
+    const now = new Date();
+    if (chartTimeframe === 'week') {
+      const end = new Date(); end.setDate(end.getDate() - chartOffset * 7);
+      const start = new Date(end); start.setDate(start.getDate() - 6);
+      return `${start.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${end.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
     }
-    if(week.length){ while(week.length<7) week.push(null); weeks.push(week); }
+    if (chartTimeframe === 'month') {
+      const d = new Date(); d.setMonth(d.getMonth() - chartOffset);
+      return d.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    }
+    if (chartTimeframe === 'quarter') {
+      const end = new Date(); end.setMonth(end.getMonth() - chartOffset * 3);
+      const start = new Date(end); start.setMonth(start.getMonth() - 2);
+      return `${start.toLocaleDateString('en-US',{month:'short',year:'numeric'})} – ${end.toLocaleDateString('en-US',{month:'short',year:'numeric'})}`;
+    }
+    const d = new Date(); d.setFullYear(d.getFullYear() - chartOffset);
+    return `${d.getFullYear()}`;
+  };
+
+  /* ── Calendar with offset ────────────────────────────── */
+  const monthCalendar = (h) => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth() - calendarOffset;
+    const refDate = new Date(y, m, 1);
+    const calYear = refDate.getFullYear();
+    const calMonth = refDate.getMonth();
+    const first = new Date(calYear, calMonth, 1);
+    const last  = new Date(calYear, calMonth + 1, 0);
+    const today = dateStr(0);
+    const weeks = [];
+    let week = Array(first.getDay()).fill(null);
+    for (let day = 1; day <= last.getDate(); day++) {
+      const d  = new Date(calYear, calMonth, day);
+      const ds = d.toISOString().split('T')[0];
+      const isFuture = ds > today;
+      week.push({ day, date: ds, completed: !!h.completions[ds], isToday: ds === today, isFuture });
+      if (week.length === 7) { weeks.push(week); week = []; }
+    }
+    if (week.length) { while (week.length < 7) week.push(null); weeks.push(week); }
     return weeks;
+  };
+
+  const calendarMonthLabel = () => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - calendarOffset);
+    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
   /* ── Loading ─────────────────────────────────────────── */
@@ -279,12 +332,23 @@ export default function HabitTrackerApp() {
           <section className="ht-section">
             <div className="ht-section-header">
               <h2 className="ht-section-title">Score</h2>
-              <select className="ht-select-v2" value={chartTimeframe} onChange={e => setChartTimeframe(e.target.value)}>
+              <select className="ht-select-v2" value={chartTimeframe} onChange={e => { setChartTimeframe(e.target.value); setChartOffset(0); }}>
                 <option value="week">Week</option>
                 <option value="month">Month</option>
                 <option value="quarter">Quarter</option>
                 <option value="year">Year</option>
               </select>
+            </div>
+
+            {/* Period navigation */}
+            <div className="ht-period-nav">
+              <button className="ht-nav-btn" onClick={() => setChartOffset(chartOffset + 1)} title="Previous period">
+                <ChevronLeft size={16} />
+              </button>
+              <span className="ht-period-label">{chartPeriodLabel()}</span>
+              <button className="ht-nav-btn" onClick={() => setChartOffset(Math.max(0, chartOffset - 1))} disabled={chartOffset === 0} title="Next period">
+                <ChevronRight size={16} />
+              </button>
             </div>
 
             <div className="ht-chart-v2">
@@ -314,12 +378,23 @@ export default function HabitTrackerApp() {
           <section className="ht-section">
             <div className="ht-section-header">
               <h2 className="ht-section-title">History</h2>
-              <select className="ht-select-v2" value={chartTimeframe} onChange={e => setChartTimeframe(e.target.value)}>
+              <select className="ht-select-v2" value={chartTimeframe} onChange={e => { setChartTimeframe(e.target.value); setChartOffset(0); }}>
                 <option value="week">Week</option>
                 <option value="month">Month</option>
                 <option value="quarter">Quarter</option>
                 <option value="year">Year</option>
               </select>
+            </div>
+
+            {/* Period navigation */}
+            <div className="ht-period-nav">
+              <button className="ht-nav-btn" onClick={() => setChartOffset(chartOffset + 1)} title="Previous period">
+                <ChevronLeft size={16} />
+              </button>
+              <span className="ht-period-label">{chartPeriodLabel()}</span>
+              <button className="ht-nav-btn" onClick={() => setChartOffset(Math.max(0, chartOffset - 1))} disabled={chartOffset === 0} title="Next period">
+                <ChevronRight size={16} />
+              </button>
             </div>
 
             <div className="ht-chart-v2">
@@ -343,9 +418,17 @@ export default function HabitTrackerApp() {
           <section className="ht-section">
             <div className="ht-section-header">
               <h2 className="ht-section-title">Calendar</h2>
-              <select className="ht-select-v2">
-                <option>Month</option>
-              </select>
+            </div>
+
+            {/* Month navigation */}
+            <div className="ht-period-nav">
+              <button className="ht-nav-btn" onClick={() => setCalendarOffset(calendarOffset + 1)} title="Previous month">
+                <ChevronLeft size={16} />
+              </button>
+              <span className="ht-period-label">{calendarMonthLabel()}</span>
+              <button className="ht-nav-btn" onClick={() => setCalendarOffset(Math.max(0, calendarOffset - 1))} disabled={calendarOffset === 0} title="Next month">
+                <ChevronRight size={16} />
+              </button>
             </div>
 
             <div className="ht-heatmap">
