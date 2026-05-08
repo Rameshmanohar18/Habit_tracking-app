@@ -1,162 +1,244 @@
-# React + Vite
+# 🌱 Habit Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A premium, fully interactive habit tracking web application built with **React + Vite**. Track your daily habits, visualize progress with rich analytics, and stay motivated with streaks, charts, and confetti celebrations.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 📸 Features at a Glance
 
-## React Compiler
+| Feature | Description |
+|---|---|
+| 📅 50-Day Grid | Front page shows today + last 49 days with ✓/✗ marks |
+| 📊 Analytics | Score line chart, history bar chart, calendar heatmap |
+| 🔥 Streaks | Current streak, best streak, all-time streak history |
+| 🎨 Custom Colors | 6 gradient color themes per habit |
+| ✏️ Edit Habits | Rename and recolor habits via hover edit button |
+| 🎉 Confetti | Celebration animation when you complete a habit |
+| 🕐 Live Clock | Real-time clock + date on the front page |
+| 💬 Daily Quote | A new motivational quote every day |
+| 📆 Calendar Modes | Week / Month / Quarter / Year calendar views |
+| 💾 Persistent Data | All data saved to localStorage — survives browser restarts |
+| 📱 Responsive | Works on desktop and mobile |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 🚀 Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Prerequisites
 
+- Node.js v18+
+- npm v9+
 
-<!-- 
+### Installation
 
-I'll add validation so users can only toggle today and past dates, not future dates. Future dates will be visible but disabled.
+```bash
+# Clone or download the project
+cd HabitTracker
 
-Now update the calendar rendering to disable and style future dates:
+# Install dependencies
+npm install
 
-Now add the `future` CSS class to `App.css`:
+# Start development server
+npm run dev
+```
 
-Here's what changed:
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-- **Today** — clickable, toggles normally, highlighted with yellow ring
-- **Past dates** — clickable, can be marked/unmarked (useful for logging missed days)
-- **Future dates** — visually dimmed (very low opacity), `cursor: not-allowed`, completely non-interactive with `pointer-events: none`, and show a tooltip "Future dates cannot be marked" on hover
+### Build for Production
 
-The chart history (week/month/quarter/year) is unaffected — it still shows all historical data as before.
+```bash
+npm run build
+npm run preview
+```
 
+---
 
+## 🗂️ Project Structure
 
+```
+HabitTracker/
+├── public/
+│   ├── favicon.svg
+│   └── icons.svg
+├── src/
+│   ├── App.jsx                    # Root app — router setup
+│   ├── App.css                    # All component styles
+│   ├── index.css                  # Base/global styles
+│   ├── main.jsx                   # React entry point with BrowserRouter
+│   └── components/
+│       ├── HabitTracker.jsx       # Root state manager + CRUD logic
+│       ├── HabitGrid.jsx          # Front page — 50-day grid view
+│       ├── HabitAnalytics.jsx     # Analytics detail page
+│       ├── CalendarView.jsx       # Calendar section (week/month/quarter/year)
+│       ├── EditHabitModal.jsx     # Rename + color picker modal
+│       ├── ConfettiBurst.jsx      # Canvas confetti animation
+│       ├── habitUtils.js          # Shared constants + stat functions
+│       └── Habit.jsx              # Legacy file (not used)
+├── index.html
+├── vite.config.js
+├── package.json
+└── README.md
+```
 
+---
 
+## 🧩 Component Architecture
 
+```
+App.jsx
+└── HabitTracker.jsx          (state, CRUD, localStorage)
+    ├── HabitGrid.jsx         (front page view)
+    │   ├── ConfettiBurst.jsx (celebration animation)
+    │   └── EditHabitModal.jsx (rename + color picker)
+    └── HabitAnalytics.jsx    (analytics view)
+        └── CalendarView.jsx  (calendar section)
+```
 
+---
 
+## 📦 Dependencies
 
+| Package | Version | Purpose |
+|---|---|---|
+| react | ^19.x | UI framework |
+| react-dom | ^19.x | DOM rendering |
+| react-router-dom | ^7.x | Client-side routing |
+| recharts | ^3.x | Charts (line, bar) |
+| lucide-react | ^1.x | Icon library |
+| vite | ^8.x | Build tool + dev server |
 
+---
 
+## 💾 Data Storage
 
+All data is stored in **browser localStorage** under the key `habits-analytics-data`.
 
+### Data Schema
 
+```json
+[
+  {
+    "id": 1715000000000,
+    "name": "Wakeup at 8 AM",
+    "colorIdx": 0,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "completions": {
+      "2026-05-01": true,
+      "2026-05-02": true,
+      "2026-05-04": true
+    }
+  }
+]
+```
 
+### Storage Limits
+- localStorage limit: ~5MB per origin
+- Each habit with 5 years of daily data ≈ ~15KB
+- Supports ~300+ habits before hitting limits
 
+---
 
+## 🎨 Color Palette
 
+Each habit gets one of 6 gradient color themes:
 
+| Index | Color 1 | Color 2 | Name |
+|---|---|---|---|
+| 0 | `#22d3ee` | `#3b82f6` | Cyan → Blue |
+| 1 | `#34d399` | `#10b981` | Green → Emerald |
+| 2 | `#a855f7` | `#ec4899` | Purple → Pink |
+| 3 | `#fbbf24` | `#f97316` | Yellow → Orange |
+| 4 | `#f87171` | `#ef4444` | Red → Red |
+| 5 | `#818cf8` | `#6366f1` | Indigo → Indigo |
 
+---
 
+## 📊 Analytics Explained
 
+### Overview Ring
+- Shows **weekly completion %** as a circular progress ring
+- Color matches the habit's assigned gradient
 
+### Score Chart (Line)
+- Shows daily completion (100% = done, 0% = missed)
+- Navigable by Week / Month / Quarter / Year
+- Use ← → arrows to browse past periods
 
+### History Chart (Bar)
+- Shows aggregated completion % per period
+- Same timeframe selector as Score chart
 
-Perfect! I'll redesign the analytics detail view to match this screenshot exactly — with the circular progress ring, score cards, line chart, bar chart, calendar heatmap, best streaks table, and frequency dots visualization.
+### Calendar
+- **Week** — 7 large day cards with ✓/✗
+- **Month** — Standard calendar grid
+- **Quarter** — 3 mini month grids side by side
+- **Year** — 12 mini month grids in a 3-column layout
+- All past months/years navigable with ← →
 
-Now add all the detail view CSS:
+### Best Streaks
+- Lists all streaks of 2+ consecutive days
+- Sorted by length (longest first)
+- Shows start date → bar → end date
 
-Perfect! The detail view now matches the screenshot exactly:
-
-**Top section:**
-- Back arrow, habit name, edit/more icons
-- "Every day" and "Off" meta tags
-
-**Overview:**
-- Large circular progress ring showing weekly score %
-- Three stat cards: Month %, Year %, Total days
-
-**Score chart:**
-- Line/bar chart with week/month/quarter/year dropdown
-- Cyan-blue gradient bars
-
-**History chart:**
-- Bar chart showing completion over time
-- Blue bars
-
-**Calendar heatmap:**
-- Month labels across top (Jan, Feb, Mar...)
-- Day labels on left (Sun, Mon, Tue...)
-- Grid of small squares — blue when completed, shows day number
-- "EDIT" button below
-
-**Best streaks:**
-- List of all streaks (2+ days)
-- Shows start date → blue progress bar with length → end date
-- Sorted by longest first
-
-**Frequency:**
+### Frequency Dots
 - 12 columns (one per month)
-- 4 dots stacked vertically per month
-- Dots light up based on completion % for that month
-- Month labels below (Jan, Feb, Mar...)
+- 4 dots per column — more dots lit = higher completion %
+- Dot color matches habit color
 
-Everything is scrollable, compact, and matches the dark mobile UI aesthetic from your reference image.
+---
 
+## 🖱️ User Interactions
 
+| Action | How |
+|---|---|
+| Mark habit done | Click ✓/✗ cell on front page |
+| Undo completion | Click the ✓ cell again |
+| View analytics | Click the habit name |
+| Edit name/color | Hover habit row → click ✏️ icon |
+| Add habit | Click + button → type name → Enter |
+| Delete habit | Click ✗ button on the right of the row |
+| Browse past data | Click ← Older / Newer → buttons |
+| Navigate analytics | Use ← → arrows in each section |
 
+---
 
+## 🔒 Data Persistence
 
+| Scenario | Data Survives? |
+|---|---|
+| Page refresh | ✅ Yes |
+| Close and reopen browser | ✅ Yes |
+| Come back after 1 week | ✅ Yes |
+| Come back after 1 year | ✅ Yes |
+| Clear browser cache/data | ❌ No |
+| Different browser | ❌ No |
+| Incognito/Private mode | ❌ No |
+| Different device | ❌ No |
 
+---
 
+## 🛠️ Available Scripts
 
+```bash
+npm run dev      # Start development server (http://localhost:5173)
+npm run build    # Build for production (output: dist/)
+npm run preview  # Preview production build locally
+npm run lint     # Run ESLint
+```
 
+---
 
+## 🌐 Browser Support
 
+| Browser | Supported |
+|---|---|
+| Chrome 90+ | ✅ |
+| Firefox 88+ | ✅ |
+| Safari 14+ | ✅ |
+| Edge 90+ | ✅ |
 
-Let me read the current file to see the exact state of the calendar and chart sections.
+---
 
-I see the issue — the calendar dropdown and chart dropdowns don't have navigation arrows yet. The functions are defined but not used. Let me add the navigation UI to all sections:
+## 📝 License
 
-Now add the CSS for `.ht-period-nav` and `.ht-period-label`:
-
-Perfect! Now your analytics page has full navigation:
-
-**Score & History charts:**
-- Dropdown to select Week/Month/Quarter/Year
-- ← → arrows below the dropdown to navigate past periods
-- Period label in the center showing exactly which period you're viewing (e.g. "Apr 30 – May 6, 2026" for week, "April 2026" for month, etc.)
-
-**Calendar:**
-- ← → arrows to navigate past months
-- Month label in the center (e.g. "May 2026")
-- All past months are accessible
-
-**How it works:**
-- Click ← to go back in time (previous week/month/quarter/year)
-- Click → to go forward (disabled when you're at the current period)
-- Changing the dropdown (Week → Month) resets the offset back to the current period
-- All past data is now browsable!
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-All habit data is stored in localStorage — specifically under the key habits-analytics-data. This means:
-
-✅ Come back after 1 week → data is there
-✅ Come back after 1 month → data is there
-✅ Come back after 1 year → data is there
-✅ Refresh the page → data is there
-✅ Close and reopen the browser → data is there
-
- -->
+MIT License — free to use, modify, and distribute.

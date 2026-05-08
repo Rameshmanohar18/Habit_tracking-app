@@ -1,287 +1,389 @@
-<!-- 
+# 📋 Habit Tracker — Project Flow & Technical Documentation
+
+---
+
+## 1. Application Flow Overview
+
+```
+User Opens App
+      │
+      ▼
+main.jsx → BrowserRouter → App.jsx → Route "/"
+      │
+      ▼
+HabitTracker.jsx (loads data from localStorage)
+      │
+      ├── No habits selected → HabitGrid.jsx (Front Page)
+      │         │
+      │         ├── Click habit name → setSelectedHabit()
+      │         ├── Click ✓/✗ cell → toggleHabit()
+      │         ├── Click + → addHabit()
+      │         ├── Click ✗ → removeHabit()
+      │         └── Hover + click ✏️ → EditHabitModal.jsx
+      │
+      └── Habit selected → HabitAnalytics.jsx (Analytics Page)
+                │
+                ├── Score line chart (recharts LineChart)
+                ├── History bar chart (recharts BarChart)
+                ├── CalendarView.jsx (week/month/quarter/year)
+                ├── Best streaks list
+                └── Frequency dots grid
+```
+
+---
+
+## 2. State Management
+
+All state lives in `HabitTracker.jsx` and is passed down as props.
+
+### State Variables
+
+| State | Type | Default | Purpose |
+|---|---|---|---|
+| `habits` | Array | `[]` | All habit objects |
+| `selectedHabit` | Object\|null | `null` | Currently viewed habit in analytics |
+| `loading` | Boolean | `true` | Shows spinner while loading from localStorage |
+| `now` | Date | `new Date()` | Live clock — updates every second |
+
+### Local State (HabitGrid)
+
+| State | Type | Purpose |
+|---|---|---|
+| `newHabitName` | String | Input value for adding a habit |
+| `gridOffset` | Number | Current page (0 = today, 1 = 50 days ago, etc.) |
+| `editingHabit` | Object\|null | Habit being edited in modal |
+| `confetti` | Object\|null | Active confetti burst position + color |
+
+### Local State (HabitAnalytics)
+
+| State | Type | Purpose |
+|---|---|---|
+| `chartTimeframe` | String | 'week'\|'month'\|'quarter'\|'year' |
+| `chartOffset` | Number | How many periods back to show |
+
+### Local State (CalendarView)
+
+| State | Type | Purpose |
+|---|---|---|
+| `mode` | String | 'week'\|'month'\|'quarter'\|'year' |
+| `offset` | Number | How many periods back to show |
+
+---
+
+## 3. Data Flow
+
+```
+localStorage
+    │
+    ▼ (on mount)
+HabitTracker.jsx
+    │  habits[]
+    ├──────────────────► HabitGrid.jsx
+    │                        │ onToggle, onAdd, onRemove, onUpdate
+    │                        ▼
+    │                    saveHabits() → localStorage
+    │
+    └──────────────────► HabitAnalytics.jsx
+                             │ habit (single object)
+                             ▼
+                         CalendarView.jsx
+                             │ onToggle
+                             ▼
+                         HabitTracker.toggleHabit()
+```
+
+---
+
+## 4. Component Details
+
+### 4.1 HabitTracker.jsx
+
+**Role:** Root orchestrator. Owns all state and business logic.
 
-I'll add validation so users can only toggle today and past dates, not future dates. Future dates will be visible but disabled.
+**Key Functions:**
 
-Now update the calendar rendering to disable and style future dates:
+```js
+addHabit(name)
+// Creates new habit object with id, name, completions:{}, createdAt
 
-Now add the `future` CSS class to `App.css`:
+removeHabit(id)
+// Filters out habit by id, clears selectedHabit if it was selected
 
-Here's what changed:
+updateHabit(id, name, colorIdx)
+// Updates name and colorIdx for a habit, syncs selectedHabit
 
-- **Today** — clickable, toggles normally, highlighted with yellow ring
-- **Past dates** — clickable, can be marked/unmarked (useful for logging missed days)
-- **Future dates** — visually dimmed (very low opacity), `cursor: not-allowed`, completely non-interactive with `pointer-events: none`, and show a tooltip "Future dates cannot be marked" on hover
+toggleHabit(habitId, date)
+// Adds or removes a date from habit.completions
 
-The chart history (week/month/quarter/year) is unaffected — it still shows all historical data as before.
+getHabitColor(habitId)
+// Returns [c1, c2] gradient pair based on habit.colorIdx or position
 
+save(updated)
+// Writes habits array to localStorage and updates state
+```
 
+---
 
+### 4.2 HabitGrid.jsx
 
+**Role:** Front page — 50-day scrollable grid with pagination.
 
+**Key Logic:**
 
+```js
+// Pagination: 50 days per page, 5 years total = 37 pages
+const DAYS_SHOWN  = 50;
+const TOTAL_DAYS  = 365 * 5;
+const TOTAL_PAGES = Math.ceil(TOTAL_DAYS / DAYS_SHOWN); // 37
 
-Perfect! I'll redesign the analytics detail view to match this screenshot exactly — with the circular progress ring, score cards, line chart, bar chart, calendar heatmap, best streaks table, and frequency dots visualization.
+// Column generation
+const columns = Array.from({ length: 50 }, (_, i) => {
+  const daysAgo = pageStart + i; // pageStart = gridOffset * 50
+  // returns { dateStr, dayName, dayNum, monthName, isToday }
+});
+```
 
-Now add all the detail view CSS:
+**Confetti trigger:**
+```js
+// Only fires when marking as DONE (not undoing)
+if (!wasCompleted && event) {
+  launchConfetti(x, y, habitColor);
+}
+```
 
-Perfect! The detail view now matches the screenshot exactly:
+---
 
-**Top section:**
-- Back arrow, habit name, edit/more icons
-- "Every day" and "Off" meta tags
+### 4.3 HabitAnalytics.jsx
 
-**Overview:**
-- Large circular progress ring showing weekly score %
-- Three stat cards: Month %, Year %, Total days
+**Role:** Full analytics page for a single habit.
 
-**Score chart:**
-- Line/bar chart with week/month/quarter/year dropdown
-- Cyan-blue gradient bars
+**Chart Data Generation:**
 
-**History chart:**
-- Bar chart showing completion over time
-- Blue bars
+| Timeframe | Data Points | X-Axis |
+|---|---|---|
+| Week | 7 daily points | Day + date |
+| Month | 28–31 daily points | Every 5th day labeled |
+| Quarter | 13 weekly points | Week start date |
+| Year | 52 weekly points | Every 4th week labeled |
 
-**Calendar heatmap:**
-- Month labels across top (Jan, Feb, Mar...)
-- Day labels on left (Sun, Mon, Tue...)
-- Grid of small squares — blue when completed, shows day number
-- "EDIT" button below
+**Stats Calculated:**
 
-**Best streaks:**
-- List of all streaks (2+ days)
-- Shows start date → blue progress bar with length → end date
-- Sorted by longest first
-
-**Frequency:**
-- 12 columns (one per month)
-- 4 dots stacked vertically per month
-- Dots light up based on completion % for that month
-- Month labels below (Jan, Feb, Mar...)
-
-Everything is scrollable, compact, and matches the dark mobile UI aesthetic from your reference image.
-
-
-
-
-
-
-
-
-
-
-
-
-Let me read the current file to see the exact state of the calendar and chart sections.
-
-I see the issue — the calendar dropdown and chart dropdowns don't have navigation arrows yet. The functions are defined but not used. Let me add the navigation UI to all sections:
-
-Now add the CSS for `.ht-period-nav` and `.ht-period-label`:
-
-Perfect! Now your analytics page has full navigation:
-
-**Score & History charts:**
-- Dropdown to select Week/Month/Quarter/Year
-- ← → arrows below the dropdown to navigate past periods
-- Period label in the center showing exactly which period you're viewing (e.g. "Apr 30 – May 6, 2026" for week, "April 2026" for month, etc.)
-
-**Calendar:**
-- ← → arrows to navigate past months
-- Month label in the center (e.g. "May 2026")
-- All past months are accessible
-
-**How it works:**
-- Click ← to go back in time (previous week/month/quarter/year)
-- Click → to go forward (disabled when you're at the current period)
-- Changing the dropdown (Week → Month) resets the offset back to the current period
-- All past data is now browsable!
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Perfect! I can see the image now. The Score chart should be a **line chart with dots** (not bars), showing connected points. Let me update it:
-
-Now replace the Score chart bar chart with a line chart with dots:
-
-Now update the Score chart data to produce daily points (not weekly buckets) when in week mode, so the line has enough points to look like the image:
-
-The Score chart now matches the image exactly:
-
-**What changed:**
-- Switched from `BarChart` → `LineChart` with connected dots
-- Blue line (`#3b82f6`) with small filled dots at each data point
-- Active dot glows brighter on hover
-- Subtle grid lines, no vertical lines — matches the dark minimal style in the image
-
-**Data points per timeframe:**
-- **Week** — 7 daily points (Mon 1, Tue 2… Sun 7)
-- **Month** — one point per day of the month (~28–31 points), giving a dense line like the image
-- **Quarter** — 13 weekly points
-- **Year** — 52 weekly points, x-axis labels every 4 weeks
-
-The History section below it keeps the bar chart style as shown in the image.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Got it — every element in the analytics page should use the habit's own color. Let me find all the hardcoded colors in the detail view.
-
-Now I can see all the hardcoded colors. I'll replace every `#3b82f6`, `#60a5fa`, stat value colors, streak bar, frequency dots, and calendar done cells with `hc1`/`hc2`:
-
-Now update Calendar, Best streaks, and Frequency section titles + colors:
-
-Now update the calendar "done" cells to use the habit color via inline style, and the streak bar fill and frequency dots:
-
-Now update the calendar "done" cells to use the habit color inline:
-
-Now pass the habit color as CSS variables on the calendar container:
-
-Also update the week view done cell and streak bar CSS to use the CSS variables:
-
-Every element in the analytics page now uses the habit's exact color from the front page:
-
-| Element | Color applied |
+| Stat | Formula |
 |---|---|
-| Habit name (title) | `hc1` |
-| Overview ring | `hc1 → hc2` gradient |
-| Month / Year / Total stats | `hc1` / `hc2` |
-| Score section title | `hc1` |
-| Score line chart | `hc1` line + dots |
-| History section title | `hc1` |
-| History bar chart | `hc1 → hc2` gradient bars |
-| Calendar section title | `hc1` |
-| Calendar done cells (all modes) | `hc1 → hc2` gradient |
-| Best streaks title + bar fill | `hc1` title, `hc2 → hc1` bar |
-| Frequency title + active dots | `hc1` |
+| Weekly Score | completions in last 7 days / 7 × 100 |
+| Monthly Score | completions this month / days elapsed × 100 |
+| Yearly Score | completions in last 365 days / 365 × 100 |
+| Current Streak | consecutive days from today backwards |
+| Best Streak | longest consecutive run in all completions |
+| Frequency | total completed days / days since creation × 100 |
 
+---
 
+### 4.4 CalendarView.jsx
 
+**Role:** Renders calendar in 4 modes with past navigation.
 
+**Mode Rendering:**
 
+| Mode | Layout | Navigation Unit |
+|---|---|---|
+| Week | 7 large day cards in a row | 1 week per step |
+| Month | Standard 7-column grid | 1 month per step |
+| Quarter | 3 mini month grids | 3 months per step |
+| Year | 12 mini month grids (3 cols) | 12 months per step |
 
+**Day Object Structure:**
+```js
+{
+  day: 15,              // day number
+  date: '2026-05-15',   // YYYY-MM-DD
+  completed: true,      // from habit.completions
+  isToday: false,       // date === today
+  isFuture: false       // date > today (disabled)
+}
+```
 
+---
 
+### 4.5 EditHabitModal.jsx
 
+**Role:** Popup for renaming a habit and changing its color.
 
+**Props:**
+```js
+{
+  habit: Object,        // current habit data
+  habitIndex: Number,   // position in habits array (for default color)
+  onSave: Function,     // (id, name, colorIdx) => void
+  onClose: Function     // () => void
+}
+```
 
+**Features:**
+- Pre-fills name and color from current habit
+- Live preview shows ring + name in selected color
+- Enter key saves, Escape key closes
+- Save button gradient matches selected color
 
+---
 
+### 4.6 ConfettiBurst.jsx
 
+**Role:** Canvas-based confetti animation on habit completion.
 
+**Animation Details:**
+- 60 particles per burst
+- Mix of rectangles and circles
+- Physics: gravity (0.35), air resistance (0.98)
+- Fade out over ~1.2 seconds
+- Colors: habit color + white, gold, purple, green
+- Renders on a fixed full-screen canvas with `pointer-events: none`
 
+---
 
+### 4.7 habitUtils.js
 
+**Role:** Shared pure functions and constants.
 
+**Exports:**
+```js
+RING_COLORS    // Array of 6 [c1, c2] gradient pairs
+QUOTES         // Array of 31 motivational quotes
+dateStr(n)     // Returns YYYY-MM-DD for n days ago
+getHabitColor  // Returns color pair for a habit
+weeklyScore    // 0-100 completion % for last 7 days
+monthlyScore   // 0-100 completion % for current month
+quarterScore   // 0-100 completion % for last 90 days
+yearlyScore    // 0-100 completion % for last 365 days
+currentStreak  // Consecutive days from today
+bestStreak     // Longest ever consecutive run
+dayOfYear      // Day number 1-365 for a given date
+```
 
+---
 
+## 5. localStorage Schema
 
-I can see the image — double-clicking a habit shows an edit panel with rename + color picker. Let me implement this.
+**Key:** `habits-analytics-data`
 
-Now I have everything. I'll add `editingHabit` state, a color picker modal, rename inline, and store custom colors per habit.
+**Value:** JSON array of habit objects
 
-Now add the `updateHabit` function and update `habitColor` to use per-habit stored color:
+```json
+[
+  {
+    "id": 1715000000000,
+    "name": "Wakeup at 8 AM",
+    "colorIdx": 0,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "completions": {
+      "2026-05-01": true,
+      "2026-05-02": true
+    }
+  }
+]
+```
 
-Update `habitColor` to use the stored `colorIdx` if present:
+**Read on mount:**
+```js
+useEffect(() => {
+  const stored = localStorage.getItem('habits-analytics-data');
+  if (stored) setHabits(JSON.parse(stored));
+}, []);
+```
 
-Now add double-click on the habit name row and the edit modal. First the double-click:
+**Write on every change:**
+```js
+localStorage.setItem('habits-analytics-data', JSON.stringify(updated));
+```
 
-Now add the edit modal just before the closing `</div>` of `ht-grid-container`:
+---
 
-Now add the modal CSS:
+## 6. Styling Architecture
 
-Here's what double-clicking a habit now does:
+All styles are in two files:
 
-**Edit modal opens with:**
-- **Name field** — pre-filled with current name, editable. Press Enter to save, Escape to cancel
-- **Color grid** — 6 color swatches (cyan, green, purple, yellow, red, indigo) matching the ring palette. Currently selected one has a white ring + checkmark
-- **Live preview** — shows the ring icon + habit name in the selected color so you can see exactly how it'll look before saving
-- **Cancel / Save buttons** — Save button uses the selected color as its gradient
+| File | Purpose |
+|---|---|
+| `src/index.css` | CSS variables, base reset, scrollbar, body |
+| `src/App.css` | All component-specific styles |
 
-**Behavior:**
-- Single click → opens analytics
-- Double click → opens edit modal
-- Color change persists to localStorage and immediately updates the front page ring, name color, and all analytics page elements
-- The hint text at the bottom is updated to mention double-click
+**CSS Variable System:**
+```css
+:root {
+  --bg-base:        #0a0a0f;
+  --bg-card:        rgba(255,255,255,0.04);
+  --border:         rgba(255,255,255,0.08);
+  --text-primary:   #f0eeff;
+  --text-secondary: rgba(240,238,255,0.55);
+  --purple:         #a855f7;
+  --green:          #34d399;
+  --cyan:           #22d3ee;
+  /* ... */
+}
+```
 
+**Naming Convention:** All classes prefixed with `ht-` (habit tracker)
 
+---
 
+## 7. Key Design Decisions
 
+### Why localStorage?
+- Zero backend required — works offline
+- Instant reads/writes — no latency
+- Sufficient for personal use (5MB limit)
+- Simple to implement and debug
 
+### Why no Redux/Zustand?
+- App has a single data source (habits array)
+- State only lives in one component (HabitTracker)
+- Props drilling is shallow (max 2 levels)
+- Adding a state library would add complexity without benefit
 
+### Why Recharts?
+- Native React integration
+- Responsive containers built-in
+- Supports custom gradients and tooltips
+- Lightweight compared to D3
 
+### Why 6 components?
+- Each component has a single clear responsibility
+- Habit.jsx was 1000+ lines — unmanageable
+- Components map 1:1 to visual sections
+- Easy to find and edit specific features
 
-You want today as the first column (leftmost), then the past 49 days going right — so the grid always starts from today and shows 50 days total, no pagination needed.
+---
 
-Now remove the prev/next navigation since it's no longer needed, and simplify the nav bar to just show the range label:
+## 8. Future Improvements
 
-Done. The front page now shows:
+| Feature | Complexity | Notes |
+|---|---|---|
+| Backend sync | High | Firebase/Supabase for cross-device |
+| Export to CSV | Low | Download completions as spreadsheet |
+| Habit categories | Medium | Group habits by type |
+| Reminders/notifications | Medium | Browser Push API |
+| Dark/light theme toggle | Low | CSS variable swap |
+| Habit templates | Low | Pre-built common habits |
+| Weekly goals | Medium | Set target days per week |
+| Import/export JSON | Low | Backup and restore data |
 
-- **Column 1** = Today (highlighted in yellow)
-- **Column 2** = Yesterday
-- **Column 3** = 2 days ago
-- ...continuing right to **Column 50** = 49 days ago
+---
 
-The grid is horizontally scrollable so you can scroll right to see older data. The nav bar shows "📅 Today → Last 50 days" with the exact date range below it. No more prev/next buttons needed since all 50 days are always visible.
+## 9. Development Notes
 
+### Adding a New Habit Stat
+1. Add the calculation function to `habitUtils.js`
+2. Import and call it in `HabitAnalytics.jsx`
+3. Add the UI element in the Overview section
 
+### Adding a New Color Theme
+1. Add `['#color1', '#color2']` to `RING_COLORS` in `habitUtils.js`
+2. The color picker in `EditHabitModal` will automatically show it
 
+### Changing the Quote Pool
+1. Add/remove objects from `QUOTES` array in `habitUtils.js`
+2. Quote selection is `QUOTES[dayOfYear % QUOTES.length]` — automatic rotation
 
-
-
-Let me check what errors exist now.
-
-Good — `habitUtils.js` exists now. Let me check all diagnostics:
-
-All clean. The fix is done — `habitUtils.js` is now in the right place. Vite should resolve all imports correctly now.
-
-If you're still seeing the 404, try stopping and restarting your dev server since Vite sometimes caches the old file resolution. Run `npm run dev` again in your terminal.
-
-
-
-All habit data is stored in localStorage — specifically under the key habits-analytics-data. This means:
-
-✅ Come back after 1 week → data is there
-✅ Come back after 1 month → data is there
-✅ Come back after 1 year → data is there
-✅ Refresh the page → data is there
-✅ Close and reopen the browser → data is there
-
- -->
+### Changing Days Per Page
+1. Update `DAYS_SHOWN` in `HabitGrid.jsx`
+2. Update `grid-template-columns: repeat(N, 44px)` in `App.css`
